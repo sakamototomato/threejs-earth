@@ -13,6 +13,7 @@ import earthApertureFs from "./shaders/earth/aperture.fs"
 import earthApertureVs from "./shaders/earth/aperture.vs"
 import { createAnimateLine, getCirclePoints } from "./utils/common";
 import { flyArc } from "./utils/arc";
+import { createLightPillar, createPointMesh, createWaveMesh } from "./utils/mesh";
 
 export type punctuation = {
     circleColor: number,
@@ -81,7 +82,7 @@ export default class Earth {
     public timeValue: number;
 
     public earth!: Mesh<SphereGeometry, ShaderMaterial>; // SphereBufferGeometry
-    // public punctuationMaterial: MeshBasicMaterial;
+    public punctuationMaterial!: MeshBasicMaterial;
     public markupPointGroup: Group;
     public waveMeshArr: Mesh[];
 
@@ -154,11 +155,11 @@ export default class Earth {
             this.createEarth(); // 创建地球
             this.createStars(); // 添加星星
             this.createEarthGlow() // 创建地球辉光
-            this.createEarthAperture() // 创建地球的大气层
-            // await this.createMarkupPoint() // 创建柱状点位
+            // this.createEarthAperture() //TODO: 创建地球的大气层
+            await this.createMarkupPoint() // 创建柱状点位
             // await this.createSpriteLabel() // 创建标签
             this.createAnimateCircle() // 创建环绕卫星
-            // this.createFlyLine() // 创建飞线
+            this.createFlyLine() // 创建飞线
 
             this.show()
             resolve()
@@ -203,7 +204,6 @@ export default class Earth {
         this.earth = new Mesh(earth_geometry, earth_material);
         this.earth.name = "earth";
         this.earthGroup.add(this.earth);
-        console.log("this.earth", this.earth)
     }
 
 
@@ -219,7 +219,6 @@ export default class Earth {
             vertices.push(vertex.x, vertex.y, vertex.z);
             const color = new Color(1, 1, 1)
             colors.push(color.r, color.g, color.b);
-            //   colors.push(new Color(1, 1, 1));
 
         }
 
@@ -252,15 +251,15 @@ export default class Earth {
         // 创建精灵材质对象SpriteMaterial
         const spriteMaterial = new SpriteMaterial({
             map: texture, // 设置精灵纹理贴图
-            color: 0x4390d1,
             transparent: true, //开启透明
             opacity: 0.7, // 可以通过透明度整体调节光圈
-            depthWrite: false, //禁止写入深度缓冲区数据
+            depthWrite: true, //禁止写入深度缓冲区数据
         });
 
         // 创建表示地球光圈的精灵模型
         const sprite = new Sprite(spriteMaterial);
-        sprite.scale.set(R * 3.0, R * 3.0, 1); //适当缩放精灵
+        const ratio = 3
+        sprite.scale.set(R * ratio, R * ratio, 1); //适当缩放精灵
         this.earthGroup.add(sprite);
     }
 
@@ -336,59 +335,67 @@ export default class Earth {
         }))
       }
     
-
+*/
     async createMarkupPoint() {
 
         await Promise.all(this.options.data.map(async (item) => {
-    
-          const radius = this.options.earth.radius;
-          const lon = item.startArray.E; //经度
-          const lat = item.startArray.N; //纬度
-    
-          this.punctuationMaterial = new MeshBasicMaterial({
-            color: this.options.punctuation.circleColor,
-            map: this.options.textures.label,
-            transparent: true, //使用背景透明的png贴图，注意开启透明计算
-            depthWrite: false, //禁止写入深度缓冲区数据
-          });
-    
-          const mesh = createPointMesh({ radius, lon, lat, material: this.punctuationMaterial }); //光柱底座矩形平面
-          this.markupPoint.add(mesh);
-          const LightPillar = createLightPillar({
-            radius: this.options.earth.radius,
-            lon,
-            lat,
-            index: 0,
-            textures: this.options.textures,
-            punctuation: this.options.punctuation,
-          }); //光柱
-          this.markupPoint.add(LightPillar);
-          const WaveMesh = createWaveMesh({ radius, lon, lat, textures: this.options.textures }); //波动光圈
-          this.markupPoint.add(WaveMesh);
-          this.waveMeshArr.push(WaveMesh);
-    
-          await Promise.all(item.endArray.map((obj) => {
-            const lon = obj.E; //经度
-            const lat = obj.N; //纬度
-            const mesh = createPointMesh({ radius, lon, lat, material: this.punctuationMaterial }); //光柱底座矩形平面
-            this.markupPoint.add(mesh);
+
+            const radius = this.options.earth.radius;
+            const lon = item.startArray.E; //经度
+            const lat = item.startArray.N; //纬度
+
+            this.punctuationMaterial = new MeshBasicMaterial({
+                color: this.options.punctuation.circleColor,
+                map: this.options.textures.label,
+                transparent: true, //使用背景透明的png贴图，注意开启透明计算
+                depthWrite: false, //禁止写入深度缓冲区数据
+            });
+
+            const mesh = createPointMesh({
+                radius, lon, lat, material:
+                    this.punctuationMaterial
+            }); //光柱底座矩形平面
+            this.markupPointGroup.add(mesh);
             const LightPillar = createLightPillar({
-              radius: this.options.earth.radius,
-              lon,
-              lat,
-              index: 1,
-              textures: this.options.textures,
-              punctuation: this.options.punctuation
+                radius: this.options.earth.radius,
+                lon,
+                lat,
+                index: 0,
+                textures: this.options.textures,
+                punctuation: this.options.punctuation,
             }); //光柱
-            this.markupPoint.add(LightPillar);
-            const WaveMesh = createWaveMesh({ radius, lon, lat, textures: this.options.textures }); //波动光圈
-            this.markupPoint.add(WaveMesh);
+            this.markupPointGroup.add(LightPillar);
+            const WaveMesh = createWaveMesh({
+                radius, lon, lat,
+                textures: this.options.textures
+            }); //波动光圈
+            this.markupPointGroup.add(WaveMesh);
             this.waveMeshArr.push(WaveMesh);
-          }))
-          this.earthGroup.add(this.markupPoint)
+
+            await Promise.all(item.endArray.map((obj) => {
+                const lon = obj.E; //经度
+                const lat = obj.N; //纬度
+                const mesh = createPointMesh({ radius, lon, lat, material: this.punctuationMaterial }); //光柱底座矩形平面
+                this.markupPointGroup.add(mesh);
+                const LightPillar = createLightPillar({
+                    radius: this.options.earth.radius,
+                    lon,
+                    lat,
+                    index: 1,
+                    textures: this.options.textures,
+                    punctuation: this.options.punctuation
+                }); //光柱
+                this.markupPointGroup.add(LightPillar);
+                const WaveMesh = createWaveMesh({
+                    radius, lon, lat,
+                    textures: this.options.textures
+                }); //波动光圈
+                this.markupPointGroup.add(WaveMesh);
+                this.waveMeshArr.push(WaveMesh);
+            }))
+            this.earthGroup.add(this.markupPointGroup)
         }))
-      }
-*/
+    }
 
     createAnimateCircle() {
         const list = getCirclePoints({
