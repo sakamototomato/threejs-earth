@@ -37,7 +37,6 @@ export class Basic {
         );
         this.camera.position.set(0, 30, -250)
 
-
         this.renderer = new THREE.WebGLRenderer({
             alpha: true, // 透明
             antialias: true, // 抗锯齿
@@ -45,6 +44,10 @@ export class Basic {
         this.renderer.setPixelRatio(window.devicePixelRatio); // 设置屏幕像素比
         this.renderer.setSize(window.innerWidth, window.innerHeight); // 设置渲染器宽高
         this.dom.appendChild(this.renderer.domElement); // 添加到dom中
+
+
+        const axesHelper = new THREE.AxesHelper(5);
+        this.scene.add(axesHelper);
     }
 
     /**
